@@ -13,6 +13,12 @@
 git clone https://github.com/xai-org/grok-build.git
 ```
 
+### GitHub clone grokfix repo
+
+```sh
+git clone https://github.com/goldengateagent/grokfix.git
+```
+
 ### Apply patch files
 
 Do not copy `lib.rs` or `client.rs` over the grok-build checkout. Diff them
