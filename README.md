@@ -38,10 +38,8 @@ diff -u grok-build/crates/codegen/xai-grok-sampler/src/client.rs \
         > client.rs.patch
 
 cd grok-build
-git apply --3way ../lib.rs.patch ../client.rs.patch
+git apply ../lib.rs.patch ../client.rs.patch
 ```
-
-`--3way` merges the hunks. Conflicts get marked in the files if the patch does not apply cleanly.
 
 ### Subsequent updates
 
