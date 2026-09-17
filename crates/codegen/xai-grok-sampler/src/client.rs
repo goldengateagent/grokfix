@@ -621,8 +621,9 @@ impl SamplingClient {
             }
         }
 
-        // Always set User-Agent: per-session origin if available, else fallback.
-        {
+        // Set User-Agent: per-session origin if available, else fallback.
+        // A User-Agent already in extra_headers wins.
+        if !headers.contains_key(USER_AGENT) {
             let ua_string = match config.origin_client.as_ref() {
                 Some(origin) => user_agent_string_for(origin),
                 None => user_agent_string_for(&OriginClientInfo {
@@ -758,6 +759,7 @@ impl SamplingClient {
         if let Some(injector) = &self.header_injector {
             injector.inject(&mut headers);
         }
+
         SentRequest {
             builder: self.http.post(url).headers(headers),
             sent_bearer,
