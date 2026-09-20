@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Install the xai-grok-pager binary into ~/.grokfix/bin.
+# Install grokfix into ~/.grokfix/bin.
 
 SRC="../grok-build/target/release/xai-grok-pager"
 DEST_DIR="$HOME/.grokfix/bin"
@@ -20,23 +20,24 @@ fi
 mkdir -p "$DEST_DIR"
 install -m 755 "$SRC" "$DEST"
 
-# Add ~/.grokfix/bin to PATH in shell rc if not already there.
-add_path_line() {
-  local rc="$1"
-  touch "$rc"
-  if ! grep -qs 'GROKFIX_BIN\|\.grokfix/bin' "$rc"; then
-    printf '\n# xai-grok-pager binary\nexport GROKFIX_BIN="$HOME/.grokfix/bin"\ncase ":$PATH:" in\n  *":$GROKFIX_BIN:"*) ;;\n  *) export PATH="$GROKFIX_BIN:$PATH" ;;\nesac\n' >> "$rc"
-    echo "added PATH entry to $rc"
-  fi
-}
-
-case "$(basename "${SHELL:-}")" in
-  zsh)  RC="$HOME/.zshrc" ;;
-  bash) RC="$HOME/.bashrc" ;;
-  *)    RC="$HOME/.profile" ;;
+# Add a PATH export to the shell rc if ~/.grokfix/bin is not in PATH.
+case ":$PATH:" in
+  *":$HOME/.grokfix/bin:"*)
+    echo "~/.grokfix/bin already on PATH"
+    ;;
+  *)
+    case "$(basename "${SHELL:-}")" in
+      zsh)  RC="$HOME/.zshrc" ;;
+      bash) RC="$HOME/.bashrc" ;;
+      *)    RC="$HOME/.profile" ;;
+    esac
+    touch "$RC"
+    if ! grep -qs '\.grokfix/bin' "$RC"; then
+      printf '\n# grokfix\nexport PATH="$HOME/.grokfix/bin:$PATH"\n' >> "$RC"
+      echo "added PATH export to $RC"
+    fi
+    ;;
 esac
-
-add_path_line "$RC"
 
 echo "installed $DEST"
 echo "restart your shell (or source your rc) to pick up the PATH change"
