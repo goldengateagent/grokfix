@@ -4,6 +4,7 @@
 
 - issue with protoc on Windows prevents Windows builds. lib.rs fixes it.
 - issue with api backend responses from providers sending non-standard 'ping' keep alive breaks connection. client.rs patches this allowing Grok Build to connect to OpenCode Meta Spark Muse model and other 'responses' models.
+- issue with web_search using the active session model's API key instead of the configured web_search model's API key, causing invalid API key errors. web_search/client.rs fixes this so the configured key is used.
 
 ## Build Grok Build from source with the patches
 
@@ -28,6 +29,7 @@ Target files in the grok-build checkout (same relative paths as this repo):
 
 - `crates/build/xai-proto-build/src/lib.rs`
 - `crates/codegen/xai-grok-sampler/src/client.rs`
+- `crates/codegen/xai-grok-tools/src/implementations/web_search/client.rs`
 
 ```sh
 diff -u grok-build/crates/build/xai-proto-build/src/lib.rs \
@@ -36,9 +38,12 @@ diff -u grok-build/crates/build/xai-proto-build/src/lib.rs \
 diff -u grok-build/crates/codegen/xai-grok-sampler/src/client.rs \
         grokfix/crates/codegen/xai-grok-sampler/src/client.rs \
         > client.rs.patch
+diff -u grok-build/crates/codegen/xai-grok-tools/src/implementations/web_search/client.rs \
+        grokfix/crates/codegen/xai-grok-tools/src/implementations/web_search/client.rs \
+        > web_search-client.rs.patch
 
 cd grok-build
-git apply ../lib.rs.patch ../client.rs.patch
+git apply ../lib.rs.patch ../client.rs.patch ../web_search-client.rs.patch
 ```
 
 ### Subsequent updates
@@ -58,6 +63,7 @@ If `git stash pop` reports conflicts, resolve the marked hunks in:
 
 - `crates/build/xai-proto-build/src/lib.rs`
 - `crates/codegen/xai-grok-sampler/src/client.rs`
+- `crates/codegen/xai-grok-tools/src/implementations/web_search/client.rs`
 
 Keep the Windows protoc early return and the `ping` skip as described below.
 Then `git add` the resolved files. Drop the leftover stash with `git stash drop`
@@ -93,6 +99,17 @@ Port three related pieces as one unit:
    errors.
 
 Leave all other client logic (headers, auth, endpoints, defaults) as is.
+
+#### 3. `web_search/client.rs` — use the configured web_search API key
+
+Port the API key selection in `WebSearchClient::new`: `rotate_session_api_key`
+must be true only when the session API key provider's current key equals the
+configured web_search `api_key`. When they differ, the client sends the
+configured key's `Authorization` header and ignores the session key, so the
+active session model's key no longer overrides the web_search model's key
+(which caused invalid API key / 401 errors). Keep the `current_bearer` /
+`rotate_session_api_key` request-header logic and the 401 attribution hook as
+is.
 
 ### MacOS
 
