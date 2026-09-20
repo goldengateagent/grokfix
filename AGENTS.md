@@ -19,9 +19,12 @@
   working tree) require the user to authorize them by saying `exec git`.
 - When the user asks for git work, print the exact mutating command(s) for
   review before asking for authorization.
+- Write the commit command as git commit -F - followed by a heredoc message with
+  one summary line, a blank line, then bullet points.
+- Use formatting when emitting the git commands to the console.
 - After approval, run only the authorized command(s) and echo the exact
   command(s) issued.
-- do not git revert any files without authorization
+- Do not git revert any files without authorization.
 
 ## Project files
 
