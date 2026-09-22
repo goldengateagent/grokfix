@@ -90,8 +90,12 @@ impl WebSearchClient {
         let rotate_session_api_key = api_key_provider
             .as_ref()
             .and_then(|p| p.current_api_key())
-            .as_deref()
-            == Some(api_key.as_str());
+            .is_some_and(|provider_key| {
+                provider_key.starts_with("eyJ")
+                    && provider_key.len() > 400
+                    && api_key.starts_with("eyJ")
+                    && api_key.len() > 400
+            });
         Ok(Self {
             http,
             base_url: base_url.clone(),
