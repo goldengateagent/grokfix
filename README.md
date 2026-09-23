@@ -2,9 +2,29 @@
 
 ## Fixes
 
-- issue with protoc on Windows prevents Windows builds. lib.rs fixes it.
 - issue with api backend responses from providers sending non-standard 'ping' keep alive breaks connection. client.rs patches this allowing Grok Build to connect to OpenCode Meta Spark Muse model and other 'responses' models.
 - issue with web_search using the active session model's API key instead of the configured web_search model's API key, causing invalid API key errors. web_search/client.rs fixes this so the configured key is used.
+- issue with protoc on Windows prevents Windows builds. lib.rs fixes it.
+
+## Installing the released binary
+
+Prebuilt binaries are published for macOS, Linux, and Windows.
+
+macOS / Linux:
+
+```sh
+curl -fsSL https://github.com/goldengateagent/grokfix/raw/v1.0.41/install.sh | bash
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://github.com/goldengateagent/grokfix/raw/v1.0.41/install.ps1 | iex
+```
+
+```sh
+grokfix
+```
 
 ## Build Grok Build from source with the patches
 

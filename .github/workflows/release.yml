@@ -1,0 +1,149 @@
+name: build
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout grokfix
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install protobuf (macOS)
+        if: runner.os == 'macOS'
+        run: brew install protobuf
+
+      - name: Install protobuf (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Install protobuf (Windows)
+        if: runner.os == 'Windows'
+        run: winget install protobuf --accept-source-agreements --accept-package-agreements
+
+      - name: Check protoc
+        run: protoc --version
+
+      - name: Install dotslash
+        if: runner.os != 'Windows'
+        run: cargo install dotslash
+
+      - name: Clone grok-build
+        run: git clone https://github.com/xai-org/grok-build.git grok-build
+
+      # README: diff the patched files in this repo against the
+      # grok-build checkout, then git apply the patches.
+      # diff exits 1 when differences are found, so don't fail the step.
+      - name: Generate patches from grokfix
+        run: |
+          diff -u grok-build/crates/build/xai-proto-build/src/lib.rs \
+                  crates/build/xai-proto-build/src/lib.rs \
+                  > lib.rs.patch || test $? -eq 1
+          diff -u grok-build/crates/codegen/xai-grok-sampler/src/client.rs \
+                  crates/codegen/xai-grok-sampler/src/client.rs \
+                  > client.rs.patch || test $? -eq 1
+          diff -u grok-build/crates/codegen/xai-grok-tools/src/implementations/web_search/client.rs \
+                  crates/codegen/xai-grok-tools/src/implementations/web_search/client.rs \
+                  > web_search-client.rs.patch || test $? -eq 1
+          ls -l ./*.patch
+
+      - name: Apply patches to grok-build
+        working-directory: grok-build
+        run: git apply ../lib.rs.patch ../client.rs.patch ../web_search-client.rs.patch
+
+      # README (macOS / Windows): cargo build -p xai-grok-pager-bin --release
+      # Linux follows the same cargo build with apt-provided protoc.
+      - name: Build xai-grok-pager-bin
+        working-directory: grok-build
+        run: cargo build -p xai-grok-pager-bin --release
+
+      - name: Rename binary to grokfix (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cp grok-build/target/release/xai-grok-pager grok-build/target/release/grokfix
+          ls -l grok-build/target/release/grokfix
+
+      - name: Rename binary to grokfix (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cp grok-build/target/release/xai-grok-pager.exe grok-build/target/release/grokfix.exe
+          ls -l grok-build/target/release/grokfix.exe
+
+      - name: Package release archive (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          case "${{ matrix.os }}" in
+            macos-latest) TARGET="aarch64-apple-darwin" ;;
+            ubuntu-latest) TARGET="x86_64-unknown-linux-gnu" ;;
+            *) echo "Unsupported matrix.os: ${{ matrix.os }}"; exit 1 ;;
+          esac
+          STAGE="dist/grokfix-${VERSION}-${TARGET}"
+          mkdir -p "$STAGE"
+          cp grok-build/target/release/grokfix "$STAGE/grokfix"
+          tar -czf "dist/grokfix-${VERSION}-${TARGET}.tar.gz" -C dist "grokfix-${VERSION}-${TARGET}"
+          ls -l dist/
+
+      - name: Package release archive (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $Version = $env:GITHUB_REF_NAME -replace '^v',''
+          $Target = "x86_64-pc-windows-msvc"
+          $Stage = "dist/grokfix-$Version-$Target"
+          New-Item -ItemType Directory -Force -Path $Stage | Out-Null
+          Copy-Item "grok-build/target/release/grokfix.exe" "$Stage/grokfix.exe" -Force
+          Compress-Archive -Path $Stage -DestinationPath "$Stage.zip" -Force
+          Get-ChildItem dist/
+
+      - name: Upload release archive (Unix)
+        if: runner.os != 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: grokfix-${{ matrix.os }}
+          path: dist/*.tar.gz
+
+      - name: Upload release archive (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: grokfix-${{ matrix.os }}
+          path: dist/*.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: dist
+          pattern: "*"
+          merge-multiple: true
+
+      - name: Create or update release
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          files: dist/*
+          overwrite_files: true

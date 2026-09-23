@@ -1,43 +1,98 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Install grokfix into ~/.grokfix/bin.
+# Download and install the grokfix release binary.
+# Usage: curl -fsSL https://github.com/goldengateagent/grokfix/raw/v1.0.41/install.sh | bash
+# Bump VERSION with each release tag (tag v$VERSION publishes the assets below).
 
-SRC="../grok-build/target/release/xai-grok-pager"
-DEST_DIR="$HOME/.grokfix/bin"
-DEST="$DEST_DIR/grokfix"
+REPO="goldengateagent/grokfix"
+VERSION="1.0.41"
+ARTIFACT="grokfix"
 
-# Resolve script directory so the source path works from any cwd.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SRC="$SCRIPT_DIR/../grok-build/target/release/xai-grok-pager"
+INSTALL_DIR="$HOME/.grokfix"
+BIN_DIR="$INSTALL_DIR/bin"
 
-if [[ ! -f "$SRC" ]]; then
-  echo "error: binary not found at $SRC" >&2
-  echo "build it first: (cd ../grok-build && cargo build --release)" >&2
-  exit 1
-fi
-
-mkdir -p "$DEST_DIR"
-install -m 755 "$SRC" "$DEST"
-
-# Add a PATH export to the shell rc if ~/.grokfix/bin is not in PATH.
-case ":$PATH:" in
-  *":$HOME/.grokfix/bin:"*)
-    echo "~/.grokfix/bin already on PATH"
-    ;;
-  *)
-    case "$(basename "${SHELL:-}")" in
-      zsh)  RC="$HOME/.zshrc" ;;
-      bash) RC="$HOME/.bashrc" ;;
-      *)    RC="$HOME/.profile" ;;
-    esac
-    touch "$RC"
-    if ! grep -qs '\.grokfix/bin' "$RC"; then
-      printf '\n# grokfix\nexport PATH="$HOME/.grokfix/bin:$PATH"\n' >> "$RC"
-      echo "added PATH export to $RC"
-    fi
-    ;;
+case "$(uname -s)" in
+    Darwin)
+        case "$(uname -m)" in
+            arm64)  TARGET="aarch64-apple-darwin" ;;
+            x86_64) TARGET="x86_64-apple-darwin" ;;
+            *) echo "Unsupported macOS architecture: $(uname -m)"; exit 1 ;;
+        esac
+        ;;
+    Linux)
+        case "$(uname -m)" in
+            aarch64|arm64) TARGET="aarch64-unknown-linux-gnu" ;;
+            x86_64|amd64)  TARGET="x86_64-unknown-linux-gnu" ;;
+            *) echo "Unsupported Linux architecture: $(uname -m)"; exit 1 ;;
+        esac
+        ;;
+    *)
+        echo "Unsupported OS: $(uname -s)"
+        exit 1
+        ;;
 esac
 
-echo "installed $DEST"
-echo "restart your shell (or source your rc) to pick up the PATH change"
+FILE="${ARTIFACT}-${VERSION}-${TARGET}.tar.gz"
+URL="https://github.com/${REPO}/releases/download/v${VERSION}/${FILE}"
+EXPECTED_DIR="${ARTIFACT}-${VERSION}-${TARGET}"
+
+if [ "$(basename "$PWD")" = "$EXPECTED_DIR" ] && [ -f "$PWD/$ARTIFACT" ]; then
+    STAGE="$PWD"
+else
+    TMP=$(mktemp -d)
+    trap 'rm -rf "$TMP"' EXIT
+
+    echo "Downloading $FILE..."
+
+    if ! curl -fsSL "$URL" -o "$TMP/$FILE"; then
+        echo "Error: no release available for $TARGET"
+        echo "Expected asset: $FILE"
+        exit 1
+    fi
+
+    tar -xzf "$TMP/$FILE" -C "$TMP"
+
+    STAGE="$TMP/${ARTIFACT}-${VERSION}-${TARGET}"
+fi
+mkdir -p "$BIN_DIR"
+cp "$STAGE/$ARTIFACT" "$BIN_DIR/$ARTIFACT"
+chmod +x "$BIN_DIR/$ARTIFACT"
+
+PATH_LINE='export PATH="$HOME/.grokfix/bin:$PATH"'
+PATH_ADDED=0
+
+case "$(basename "${SHELL:-}")" in
+    zsh)  RC="$HOME/.zshrc" ;;
+    bash) RC="$HOME/.bashrc" ;;
+    *)    RC="$HOME/.profile" ;;
+esac
+
+if [ ! -f "$RC" ]; then
+    echo "Error: $RC not found; not creating a shell rc file."
+    echo "Binary is at $BIN_DIR/$ARTIFACT"
+    echo "Add this to your PATH:"
+    echo "  $PATH_LINE"
+    exit 1
+fi
+
+if grep -Fq '.grokfix/bin' "$RC"; then
+    PATH_ADDED=0
+else
+    printf '\n# grokfix\n%s\n' "$PATH_LINE" >> "$RC"
+    PATH_ADDED=1
+fi
+
+export PATH="$BIN_DIR:$PATH"
+
+echo
+echo "Installed $ARTIFACT to:"
+echo "  $BIN_DIR/$ARTIFACT"
+echo
+if [ "$PATH_ADDED" -eq 1 ]; then
+    echo "PATH updated in $RC."
+    echo "Restart your shell or run:"
+    echo "  export PATH=\"$BIN_DIR:\$PATH\""
+else
+    echo "PATH already contains $BIN_DIR (found in $RC)."
+fi
