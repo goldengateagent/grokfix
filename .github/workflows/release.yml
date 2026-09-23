@@ -40,7 +40,7 @@ jobs:
 
       - name: Install protobuf (Windows)
         if: runner.os == 'Windows'
-        run: winget install protobuf --accept-source-agreements --accept-package-agreements
+        run: choco install -y protoc
 
       - name: Check protoc
         run: protoc --version
