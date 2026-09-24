@@ -72,6 +72,13 @@ jobs:
         working-directory: grok-build
         run: git apply ../lib.rs.patch ../client.rs.patch ../web_search-client.rs.patch
 
+      # Durable fix for Windows cc/find-msvc-tools i32/u32 breakage:
+      # cc 1.2.48 passes find-msvc-tools 0.1.13 FILE_ATTRIBUTE_TEMPORARY (i32)
+      # to custom_flags(u32). Fixed upstream in cc 1.4.7, so move cc forward.
+      - name: Update cc past Windows i32/u32 breakage
+        working-directory: grok-build
+        run: cargo update -p cc
+
       # Build the pager binary with the system protoc.
       - name: Build xai-grok-pager-bin
         working-directory: grok-build
