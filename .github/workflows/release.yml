@@ -1,4 +1,4 @@
-name: build
+name: release
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
         shell: bash
     steps:
       - name: Checkout grokfix
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: grokfix
 
@@ -52,9 +52,9 @@ jobs:
       - name: Clone grok-build
         run: git clone https://github.com/xai-org/grok-build.git grok-build
 
-      # README: diff the patched files in this repo against the
-      # grok-build checkout, then git apply the patches.
-      # diff exits 1 when differences are found, so don't fail the step.
+      # Diff the patched files against the grok-build checkout,
+      # then apply the patches. diff exits 1 when differences
+      # are found, so don't fail the step.
       - name: Generate patches from grokfix
         run: |
           diff -u grok-build/crates/build/xai-proto-build/src/lib.rs \
@@ -72,8 +72,7 @@ jobs:
         working-directory: grok-build
         run: git apply ../lib.rs.patch ../client.rs.patch ../web_search-client.rs.patch
 
-      # README (macOS / Windows): cargo build -p xai-grok-pager-bin --release
-      # Linux follows the same cargo build with apt-provided protoc.
+      # Build the pager binary with the system protoc.
       - name: Build xai-grok-pager-bin
         working-directory: grok-build
         run: cargo build -p xai-grok-pager-bin --release
@@ -119,14 +118,14 @@ jobs:
 
       - name: Upload release archive (Unix)
         if: runner.os != 'Windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: grokfix-${{ matrix.os }}
           path: dist/*.tar.gz
 
       - name: Upload release archive (Windows)
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: grokfix-${{ matrix.os }}
           path: dist/*.zip
