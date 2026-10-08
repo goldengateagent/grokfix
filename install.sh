@@ -2,11 +2,11 @@
 set -euo pipefail
 
 # Download and install the grokfix release binary.
-# Usage: curl -fsSL https://github.com/goldengateagent/grokfix/raw/v1.0.41/install.sh | bash
+# Usage: curl -fsSL https://github.com/goldengateagent/grokfix/raw/v1.0.45/install.sh | bash
 # Bump VERSION with each release tag (tag v$VERSION publishes the assets below).
 
 REPO="goldengateagent/grokfix"
-VERSION="1.0.41"
+VERSION="1.0.45"
 ARTIFACT="grokfix"
 
 INSTALL_DIR="$HOME/.grokfix"

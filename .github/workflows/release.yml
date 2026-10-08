@@ -66,11 +66,14 @@ jobs:
           diff -u grok-build/crates/codegen/xai-grok-tools/src/implementations/web_search/client.rs \
                   grokfix/crates/codegen/xai-grok-tools/src/implementations/web_search/client.rs \
                   > web_search-client.rs.patch || test $? -eq 1
+          diff -u grok-build/crates/codegen/xai-grok-mcp/src/tool_name.rs \
+                  grokfix/crates/codegen/xai-grok-mcp/src/tool_name.rs \
+                  > tool_name.rs.patch || test $? -eq 1
           ls -l ./*.patch
 
       - name: Apply patches to grok-build
         working-directory: grok-build
-        run: git apply ../lib.rs.patch ../client.rs.patch ../web_search-client.rs.patch
+        run: git apply ../lib.rs.patch ../client.rs.patch ../web_search-client.rs.patch ../tool_name.rs.patch
 
       # Durable fix for Windows cc/find-msvc-tools i32/u32 breakage:
       # cc 1.2.48 passes find-msvc-tools 0.1.13 FILE_ATTRIBUTE_TEMPORARY (i32)

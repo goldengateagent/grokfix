@@ -2,10 +2,15 @@
 
 ## Fixes
 
-- issue with api backend responses from providers sending non-standard 'ping' keep alive breaks connection. client.rs patches this allowing Grok Build to connect to OpenCode Meta Spark Muse model and other 'responses' models.
-- issue with web_search using the active session model's API key instead of the configured web_search model's API key, causing invalid API key errors. web_search/client.rs fixes this so the configured key is used.
+- issue with api backend responses from providers sending non-standard 'ping'
+  keep alive breaks connection. client.rs patches this allowing Grok Build to
+  connect to OpenCode Meta Spark Muse model and other 'responses' models.
+- issue with web_search using the active session model's API key instead of the
+  configured web_search model's API key, causing invalid API key errors.
+  web_search/client.rs fixes this so the configured key is used.
 - issue with protoc on Windows prevents Windows builds. lib.rs fixes it.
-- issue with AWS MCP names with extra underscores getting dropped at session load. `tool_name.rs` fixes it so they load.
+- issue with AWS MCP names with extra underscores getting dropped at session
+  load. `tool_name.rs` fixes it so they load.
 
 ## Installing the released binary
 
@@ -14,13 +19,13 @@ Prebuilt binaries are published for macOS, Linux, and Windows.
 macOS / Linux:
 
 ```sh
-curl -fsSL https://github.com/goldengateagent/grokfix/raw/v1.0.41/install.sh | bash
+curl -fsSL https://github.com/goldengateagent/grokfix/raw/v1.0.45/install.sh | bash
 ```
 
 Windows (PowerShell):
 
 ```powershell
-irm https://github.com/goldengateagent/grokfix/raw/v1.0.41/install.ps1 | iex
+irm https://github.com/goldengateagent/grokfix/raw/v1.0.45/install.ps1 | iex
 ```
 
 ```sh
@@ -138,7 +143,12 @@ active session model's key no longer overrides the web_search model's key
 is.
 
 #### 4. `tool_name.rs` — AWS MCP names
-Ports admission for qualified AWS names. It splits each qualified name on the first double underscore so AWS tool segments keep their own underscores and leading digits. It checks empty segments, allowed characters, segment starts, and length, admitting catalog keys up to 256 chars while provider calls stay at 64. It rejects names that fail validation or do not round-trip through parse and rebuild, so only clean AWS tools enter the session catalog.
+Ports admission for qualified AWS names. It splits each qualified name on the
+first double underscore so AWS tool segments keep their own underscores and
+leading digits. It checks empty segments, allowed characters, segment starts,
+and length, admitting catalog keys up to 256 chars while provider calls stay at
+64. It rejects names that fail validation or do not round-trip through parse and
+rebuild, so only clean AWS tools enter the session catalog.
 
 ### MacOS
 

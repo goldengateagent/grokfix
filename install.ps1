@@ -1,11 +1,11 @@
 $ErrorActionPreference = "Stop"
 
 # Download and install the grokfix release binary.
-# Usage: irm https://github.com/goldengateagent/grokfix/raw/v1.0.41/install.ps1 | iex
+# Usage: irm https://github.com/goldengateagent/grokfix/raw/v1.0.45/install.ps1 | iex
 # Bump $Version with each release tag (tag v$Version publishes the assets below).
 
 $Repo = "goldengateagent/grokfix"
-$Version = "1.0.41"
+$Version = "1.0.45"
 $Artifact = "grokfix"
 
 $InstallDir = Join-Path $env:USERPROFILE ".grokfix"
