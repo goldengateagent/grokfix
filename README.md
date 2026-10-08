@@ -5,6 +5,7 @@
 - issue with api backend responses from providers sending non-standard 'ping' keep alive breaks connection. client.rs patches this allowing Grok Build to connect to OpenCode Meta Spark Muse model and other 'responses' models.
 - issue with web_search using the active session model's API key instead of the configured web_search model's API key, causing invalid API key errors. web_search/client.rs fixes this so the configured key is used.
 - issue with protoc on Windows prevents Windows builds. lib.rs fixes it.
+- issue with AWS MCP names with extra underscores getting dropped at session load. `tool_name.rs` fixes it so they load.
 
 ## Installing the released binary
 
@@ -50,6 +51,7 @@ Target files in the grok-build checkout (same relative paths as this repo):
 - `crates/build/xai-proto-build/src/lib.rs`
 - `crates/codegen/xai-grok-sampler/src/client.rs`
 - `crates/codegen/xai-grok-tools/src/implementations/web_search/client.rs`
+- `crates/codegen/xai-grok-mcp/src/tool_name.rs`
 
 ```sh
 diff -u grok-build/crates/build/xai-proto-build/src/lib.rs \
@@ -61,9 +63,12 @@ diff -u grok-build/crates/codegen/xai-grok-sampler/src/client.rs \
 diff -u grok-build/crates/codegen/xai-grok-tools/src/implementations/web_search/client.rs \
         grokfix/crates/codegen/xai-grok-tools/src/implementations/web_search/client.rs \
         > web_search-client.rs.patch
+diff -u grok-build/crates/codegen/xai-grok-mcp/src/tool_name.rs \
+        grokfix/crates/codegen/xai-grok-mcp/src/tool_name.rs \
+        > tool_name.rs.patch
 
 cd grok-build
-git apply ../lib.rs.patch ../client.rs.patch ../web_search-client.rs.patch
+git apply ../lib.rs.patch ../client.rs.patch ../web_search-client.rs.patch ../tool_name.rs.patch
 ```
 
 ### Subsequent updates
@@ -84,6 +89,7 @@ If `git stash pop` reports conflicts, resolve the marked hunks in:
 - `crates/build/xai-proto-build/src/lib.rs`
 - `crates/codegen/xai-grok-sampler/src/client.rs`
 - `crates/codegen/xai-grok-tools/src/implementations/web_search/client.rs`
+- `crates/codegen/xai-grok-mcp/src/tool_name.rs`
 
 Keep the Windows protoc early return and the `ping` skip as described below.
 Then `git add` the resolved files. Drop the leftover stash with `git stash drop`
@@ -130,6 +136,9 @@ active session model's key no longer overrides the web_search model's key
 (which caused invalid API key / 401 errors). Keep the `current_bearer` /
 `rotate_session_api_key` request-header logic and the 401 attribution hook as
 is.
+
+#### 4. `tool_name.rs` — AWS MCP names
+Ports admission for qualified AWS names. It splits each qualified name on the first double underscore so AWS tool segments keep their own underscores and leading digits. It checks empty segments, allowed characters, segment starts, and length, admitting catalog keys up to 256 chars while provider calls stay at 64. It rejects names that fail validation or do not round-trip through parse and rebuild, so only clean AWS tools enter the session catalog.
 
 ### MacOS
 
